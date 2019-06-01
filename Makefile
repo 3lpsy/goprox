@@ -1,8 +1,9 @@
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 BIN_DIR=bin
-TARGET=socksprox.go
+TARGET=socks/main.go
 BINARY=socksprox
+HTTP_TARGET=http/main.go
 HTTP_BINARY=httpprox
 VERSION=1.0.1
 BUILD=`git rev-parse HEAD`
@@ -14,23 +15,37 @@ LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Build=${BUILD}"
 
 default: build
 
-all: clean build-all install
+all: clean deps build-all install
 
-build:
-	go build ${LDFLAGS} ${TARGET} -o ${BIN_DIR}/${BINARY}
-	go build ${LDFLAGS} ${HTTP_TARGET} -o ${BIN_DIR}/${BINARY}
+build: build-socks
 
-build-all:
+build-socks:
+	go build ${LDFLAGS} -o ${BIN_DIR}/${BINARY} ${TARGET}
+
+build-http:
+	go build ${LDFLAGS} -o ${BIN_DIR}/${HTTP_BINARY} ${HTTP_TARGET}
+
+build-all: build-socks-all build-http-all
+
+build-socks-all:
 	$(foreach GOOS, $(PLATFORMS),\
-	$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); go build $(TARGET) -v -o $(BIN_DIR)/$(BINARY)-$(GOOS)-$(GOARCH))))
+	$(foreach GOARCH, $(ARCHITECTURES),\
+	$(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); go build -o $(BIN_DIR)/$(BINARY)-$(GOOS)-$(GOARCH) $(TARGET))))
+
+build-http-all:
 	$(foreach GOOS, $(PLATFORMS),\
-	$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); go build $(HTTP_TARGET) -v -o $(BIN_DIR)/$(HTTP_BIN)-$(GOOS)-$(GOARCH))))
+	$(foreach GOARCH, $(ARCHITECTURES),\
+	$(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); go build -o $(BIN_DIR)/$(HTTP_BINARY)-$(GOOS)-$(GOARCH) $(HTTP_TARGET))))
 
 install:
 	go install ${LDFLAGS}
 
+deps:
+	go get github.com/elazarl/goproxy
+	go get github.com/armon/go-socks5
+
 # Remove only what we've created
 clean:
-	rm ${ROOT_DIR}/${BIN_DIR}/*
+	rm -f "${ROOT_DIR}/${BIN_DIR}/*"
 
-.PHONY: check clean install build_all all
+.PHONY: check clean install build-all all

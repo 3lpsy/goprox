@@ -1,6 +1,8 @@
 server
 socksprox
 socksprox-*
+httpprox
+httpprox-*
 
 ### Linux ###
 *~
